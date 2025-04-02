@@ -1,0 +1,29 @@
+/[Bb]in/
+obj/*
+/Library/
+/Logs/
+/Packages/
+/ProjectSettings/
+/Temp/
+/UserSettings/
+
+/Assets/Arts/*
+!/Assets/Arts/UI
+!/Assets/Arts/UI/*
+!/Assets/Arts/Prefab
+!/Assets/Arts/Prefab/*
+!/Assets/Arts/Animation
+!/Assets/Arts/Animation/*
+
+/Assets/Plugins/
+/Assets/Resources/
+/Assets/Settings/
+/Assets/StreamingAssets/
+/Assets/UniversalMediaPlayer/
+/Assets/Utils/*
+!/Assets/Utils/Ultimate Camera Controller
+!/Assets/Utils/Ultimate Camera Controller/*
+
+
+.vs/
+.vscode
