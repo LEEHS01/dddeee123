@@ -1,0 +1,16 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Onthesys
+{
+    [System.Serializable]
+    public class AlarmSummaryModel
+    {
+        public int obsidx;
+        public int month;
+        public int cnt;
+    }
+}
