@@ -70,7 +70,7 @@ public class ButtonWithPointAnimation : MonoBehaviour, IPointerEnterHandler, IPo
         }
     }
 
-    public void OnUpdate(Dictionary<int, AlarmData> mapAlarms)
+    public void OnUpdate(Dictionary<int, AlarmCount> mapAlarms)
     {
         points.ForEach(point => 
         {

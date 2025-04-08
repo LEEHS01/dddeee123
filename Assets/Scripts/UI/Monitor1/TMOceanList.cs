@@ -22,7 +22,7 @@ public class TMOceanList : MonoBehaviour
         //DataManager.Instance.OnAlarmUpdateOcean.AddListener(this.OnAlarmUpdateOcean);
     }
 
-    public void OnAlarmUpdateOcean(List<KeyValuePair<int, AlarmData>> oceanAlarms) {
+    public void OnAlarmUpdateOcean(List<KeyValuePair<int, AlarmCount>> oceanAlarms) {
         var list = oceanAlarms;
 
         var i = 0;

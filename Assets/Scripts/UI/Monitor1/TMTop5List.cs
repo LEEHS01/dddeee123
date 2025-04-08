@@ -9,7 +9,7 @@ using DG.Tweening;
 public class TMTop5List : MonoBehaviour
 {
     public List<GameObject> maps = new List<GameObject>();
-    private List<KeyValuePair<string, AlarmData>> list;
+    private List<KeyValuePair<string, AlarmCount>> list;
     public List<TMP_Text> names;
     public List<TMP_Text> reds;
     public List<TMP_Text> yellows;
@@ -22,7 +22,7 @@ public class TMTop5List : MonoBehaviour
         //DataManager.Instance.OnAlarmUpdateYearly.AddListener(this.OnAlarmUpdateYearly);
     }
 
-    public void OnAlarmUpdateYearly(List<KeyValuePair<string, AlarmData>> top5AlarmsForYear) 
+    public void OnAlarmUpdateYearly(List<KeyValuePair<string, AlarmCount>> top5AlarmsForYear) 
     {
         this.list = top5AlarmsForYear.ToList();
 

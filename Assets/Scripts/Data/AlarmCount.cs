@@ -6,7 +6,7 @@ using UnityEngine.PlayerLoop;
 
 namespace Onthesys
 {
-    public class AlarmData
+    public class AlarmCount
     {
         public int green;
         public int red;

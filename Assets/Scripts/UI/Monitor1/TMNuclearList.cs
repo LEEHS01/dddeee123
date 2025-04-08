@@ -23,7 +23,7 @@ public class TMNuclearList : MonoBehaviour
         //DataManager.Instance.OnAlarmUpdateNuclear.AddListener(this.OnAlarmUpdateNuclear);
     }
 
-    public void OnAlarmUpdateNuclear(List<KeyValuePair<int, AlarmData>> nuclearAlarms) {
+    public void OnAlarmUpdateNuclear(List<KeyValuePair<int, AlarmCount>> nuclearAlarms) {
         var list = nuclearAlarms;
         var i = 0;
         var green = 0;

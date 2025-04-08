@@ -25,7 +25,7 @@ public class PanelController : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
     public UnityEvent onHome;
     public UnityEvent<int> onSelectArea;
-    public UnityEvent<Dictionary<int, AlarmData>> onAlarmUpdateMap;
+    public UnityEvent<Dictionary<int, AlarmCount>> onAlarmUpdateMap;
 
     void Start()
     {
@@ -60,7 +60,7 @@ public class PanelController : MonoBehaviour, IBeginDragHandler, IEndDragHandler
 
     public void OnHome() =>onHome.Invoke();
     public void OnSelectArea(int areaId) => onSelectArea.Invoke(areaId);
-    public void OnAlarmUpdateMap(List<KeyValuePair<int, AlarmData>> mapData) => onAlarmUpdateMap.Invoke(mapData.ToDictionary());
+    public void OnAlarmUpdateMap(List<KeyValuePair<int, AlarmCount>> mapData) => onAlarmUpdateMap.Invoke(mapData.ToDictionary());
 
 
     public void OnDrag(PointerEventData eventData)

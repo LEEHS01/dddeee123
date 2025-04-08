@@ -108,10 +108,10 @@ namespace Onthesys
         //OnAlarmUpdateMap, OnAlarmUpdateOcean, OnAlarmUpdateNuclear의 데이터는
         //OnAlarmUpdate를 가공해서 얻을 수 있기에 추후에 통합 가능.
         [SerializeField] private UnityEvent<List<KeyValuePair<string, int>>> OnAlarmUpdateMonthly;
-        [SerializeField] private UnityEvent<List<KeyValuePair<string, AlarmData>>> OnAlarmUpdateYearly;
-        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmData>>> OnAlarmUpdateMap;
-        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmData>>> OnAlarmUpdateOcean;
-        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmData>>> OnAlarmUpdateNuclear;
+        [SerializeField] private UnityEvent<List<KeyValuePair<string, AlarmCount>>> OnAlarmUpdateYearly;
+        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmCount>>> OnAlarmUpdateMap;
+        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmCount>>> OnAlarmUpdateOcean;
+        [SerializeField] private UnityEvent<List<KeyValuePair<int, AlarmCount>>> OnAlarmUpdateNuclear;
 
         /// <summary>
         /// A모니터 TMBarList 아래의 알람Summary UI를 초기화하기 위한 이벤트
@@ -186,24 +186,24 @@ namespace Onthesys
         /// 연간 상위 5개 지역(obs)
         /// 지역(obs)-클래스별 알람 수
         /// </summary>
-        private Dictionary <string, AlarmData> top5AlarmsForYear = new();
+        private Dictionary <string, AlarmCount> top5AlarmsForYear = new();
         /// <summary>
         /// 각 지역별 알람 현황
         /// 사용처는 ButtonWithPointAnimation에서 알람 유무에 따라 지역 아이콘 색깔 표시
         /// </summary>
-        private Dictionary <int, AlarmData> mapAlarms = new();
+        private Dictionary <int, AlarmCount> mapAlarms = new();
         /// <summary>
         /// 해양 지역 알람 현황
         /// 사용처는 TMOceanList에 데이터 표시.
         /// mapAlarms에서 간단한 데이터 정제를 통해 얻게 바꿔야할 듯
         /// </summary>
-        private Dictionary <int, AlarmData> oceanAlarms = new();
+        private Dictionary <int, AlarmCount> oceanAlarms = new();
         /// <summary>
         /// 발전소 지역 알람 현황
         /// 사용처는 TMNuclearList에 데이터 표시.
         /// mapAlarms에서 간단한 데이터 정제를 통해 얻게 바꿔야할 듯
         /// </summary>
-        private Dictionary <int, AlarmData> nuclearAlarms = new();
+        private Dictionary <int, AlarmCount> nuclearAlarms = new();
         #endregion [※ DataStructs 자료구조 ※]
 
 
@@ -496,7 +496,7 @@ namespace Onthesys
                 dbManager.GetAlarmYearly(datas =>
                 {
                     var dicYearly = obss.GroupBy(item => item.areaName)
-                                            .ToDictionary(t => t.Key, t => new AlarmData());
+                                            .ToDictionary(t => t.Key, t => new AlarmCount());
                     foreach (var map in datas)
                     {
                         dicYearly[map.areanm].yellow = map.ala0;
@@ -523,7 +523,7 @@ namespace Onthesys
         void UpdateAlarmSummary()
         {
             var dicCurrentAlarm = obss.GroupBy(item => item.areaId)
-                                       .ToDictionary(t => t.Key, t => new AlarmData());
+                                       .ToDictionary(t => t.Key, t => new AlarmCount());
 
             var NuclearIdx = obss.Where(t => t.type == AreaData.AreaType.Nuclear)
                                   .Select(t => t.areaId)

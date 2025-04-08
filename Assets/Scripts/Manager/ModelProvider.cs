@@ -23,8 +23,8 @@ public interface ModelProvider
     public List<ToxinData> GetToxins();
     public List<ToxinData> GetToxinsInLog();
 
-    public List<AlarmData> GetAlarms();
-    public AlarmData GetAlarm(int alarmId);
+    public List<AlarmCount> GetAlarms();
+    public AlarmCount GetAlarm(int alarmId);
 
     public List<AlarmMontlyModel> GetAlarmMonthly();
     public List<AlarmYearlyModel> GetAlarmYearly();

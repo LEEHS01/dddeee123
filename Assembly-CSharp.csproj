@@ -9,7 +9,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <RootNamespace></RootNamespace>
+    <RootNamespace>
+    </RootNamespace>
     <ProjectGuid>{39430E44-3360-A95A-1061-4C1F6A29B56C}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -257,7 +258,7 @@
     <Compile Include="Assets\Arts\UI\UIAssets\Scripts\TMTextColorControl.cs" />
     <Compile Include="Assets\Scripts\UI\Monitor1_kamos\Popup\PopupAlarm.cs" />
     <Compile Include="Assets\Scripts\UI\Monitor1_kamos\Panel\ObsMonitoring.cs" />
-    <Compile Include="Assets\Scripts\Data\AlarmData.cs" />
+    <Compile Include="Assets\Scripts\Data\AlarmCount.cs" />
     <Compile Include="Assets\UniversalMediaPlayer\Scripts\Sources\Services\ServiceBase.cs" />
     <Compile Include="Assets\Scripts\UI\Etc\SetTime.cs" />
     <Compile Include="Assets\Scripts\UI\Monitor2\TmAlramList.cs" />
