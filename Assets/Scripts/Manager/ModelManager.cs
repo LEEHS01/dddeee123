@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 
 public class ModelManager : MonoBehaviour, ModelProvider
@@ -28,127 +30,175 @@ public class ModelManager : MonoBehaviour, ModelProvider
 
     private void Start()
     {
+        //Get Core Components
         dbManager = GetComponent<DbManager>();
         uiManager = GetComponent<UiManager>();
+
+        //Load Datas
+        dbManager.GetObss(obss => obss.ForEach(obs => this.obss.Add(obs)));
+        dbManager.GetAreas(areas => areas.ForEach(area => this.areas.Add(area)));
+        dbManager.GetAlarmLogsActivated(logs => logs.ForEach(log => this.logDataList.Add(log)));
+        dbManager.GetAlarmMonthly(monthModels => monthModels.ForEach(model => this.alarmMonthly.Add( 
+            (GetAreaByName(model.areanm).areaId, model.cnt)
+            )));
+        dbManager.GetAlarmYearly(yearModels => yearModels.ForEach(model => this.alarmYearly.Add(
+            (GetAreaByName(model.areanm).areaId, new(0, model.ala1, model.ala2, model.ala0) { })
+            )));
+
+        //Register Events
+        uiManager.Register(UiEventType.SelectAlarm, OnSelectAlarm);
+        uiManager.Register(UiEventType.NavigateArea, OnSelectArea);
+        uiManager.Register(UiEventType.NavigateObs, OnNavigateObs);
     }
+
     #endregion [Instantiating]
 
+    #region [EventListener]
+
+    private void OnSelectArea(object obj)
+    {
+        if (obj is not int areaId) return;
+
+        alarmSummarys.Clear();
+        dbManager.GetAlarmSummary(areaId, summarys => summarys.ForEach(summary => alarmSummarys.Add(summary)));
+    }
+
+    private void OnNavigateObs(object obj)
+    {
+        if (obj is not int obsId) return;
+
+        toxins.Clear();
+        dbManager.GetToxinData(obsId, toxins => toxins.ForEach(toxin => this.toxins.Add(toxin)));
+    }
+
+    private void OnSelectAlarm(object obj)
+    {
+        if (obj is not int alarmId) return;
+
+        LogData log = logDataList.Find(logData => logData.idx == alarmId);
+
+        if (log == null) throw new Exception("ModelManager - OnSelectAlarm : 선택한 로그의 정보를 찾지 못했습니다.");
+
+        logToxins.Clear();
+        dbManager.GetToxinData(log.obsId, toxins => toxins.ForEach(toxin => this.logToxins.Add(toxin)));
+
+        //TODO
+    }
+
+    #endregion [EventListener]
 
     #region [DataStructs]
 
-    List<ObsData> obss;
-    List<AlarmCount> alarms;
-    List<ToxinData> toxins;
-    List<ToxinData> toxinsLog;
-    List<LogData> logDataList;  // 로그 데이터 추가
-    //List<Area> areas;
+    List<ObsData> obss = new();
+    List<ToxinData> toxins = new();
+    List<ToxinData> logToxins = new();
+    List<LogData> logDataList = new();
+    List<AreaData> areas = new();
+
+    Dictionary<int, AlarmCount> areaAlarmCounts = new();
+    List<AlarmSummaryModel> alarmSummarys = new();
+    List<(int areaId, int count)> alarmMonthly = new();
+    List<(int areaId, AlarmCount counts)> alarmYearly = new();
 
     #endregion [DataStructs]
 
-    public List<LogData> GetAlarms()
-    {
-        throw new NotImplementedException();
-    }
 
-    public LogData GetAlarm(int alarmId)
-    {
-        throw new NotImplementedException();
-    }
+    #region [ModelProvider]
+    public ObsData GetObs(int obsId) => obss.Find(obs => obs.id == obsId);
 
-    public ToxinStatus GetAreaStatus(int areaId)
-    {
-        throw new NotImplementedException();
-    }
+    public List<ObsData> GetObss() => obss;
 
-
-    public List<(int areIdx, string areaName)> GetAreaDatas()
-    {
-        throw new NotImplementedException();
-    }
-
-    public ObservatoryModel GetObsData(int obsId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ObservatoryModel> GetObsDatas()
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ObservatoryModel> GetObsDatasByAreaId(int areaId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public ObsData GetObs(int obsId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ObsData> GetObss()
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ObsData> GetObssByAreaId(int areaId)
-    {
-        throw new NotImplementedException();
-    }
+    public List<ObsData> GetObssByAreaId(int areaId) => obss.FindAll(obs => obs.areaId == areaId);
 
     public ToxinStatus GetObsStatus(int obsId)
     {
-        throw new NotImplementedException();
+        ToxinStatus status = ToxinStatus.Green;
+
+        //해당 관측소의 로그를 모두 가져옴
+        List<LogData> obsLogs = logDataList.FindAll(log => log.obsId == obsId);
+        List<ToxinStatus> transitionCondition;
+
+        //로그를 순회하며 가장 높은 경고 단계를 탐색
+        foreach (var log in obsLogs)
+            switch (log.status)
+            {
+                case 1: //경고
+                    transitionCondition = new() { ToxinStatus.Green };
+                    if (transitionCondition.Contains(status))
+                        status = ToxinStatus.Yellow;
+                    break;
+                case 2: //경보
+                    transitionCondition = new() { ToxinStatus.Green, ToxinStatus.Yellow };
+                    if (transitionCondition.Contains(status))
+                        status = ToxinStatus.Red;
+                    break;
+                case 0: //설비이상
+                    transitionCondition = new() { ToxinStatus.Green, ToxinStatus.Yellow, ToxinStatus.Red };
+                    if (transitionCondition.Contains(status))
+                        status = ToxinStatus.Purple;
+                    break;
+                default:
+                    throw new Exception("사전에 정의되지 않은 에러 코드를 사용하고 있습니다. 오류 코드는 다음의 범위 안에 있어야 합니다. (0,1,2) \n 입력된 오류 코드:" + log.status);
+            }
+
+        //반환
+        return status;
     }
 
-    public List<AreaData> GetAreas()
+    public List<AreaData> GetAreas() => areas;
+
+    public AreaData GetArea(int areaId) => areas.Find(area => area.areaId == areaId);
+    public ToxinStatus GetAreaStatus(int areaId) 
     {
-        throw new NotImplementedException();
+        ToxinStatus highestStatus = ToxinStatus.Green;
+
+        //지역 내 관측소들을 순회하며 가장 높은 수준의 알람을 탐색
+        var obssInArea = GetObssByAreaId(areaId);
+        obssInArea.ForEach(obs => 
+            highestStatus = (ToxinStatus)Math.Max((int)highestStatus, (int)GetObsStatus(obs.id))
+        );
+
+        return highestStatus;
     }
 
-    public AreaData GetArea(int areaId)
+    public ToxinData GetToxin(int sensorId) => toxins.Find(toxin => toxin.hnsid == sensorId);
+
+    public List<ToxinData> GetToxins() => toxins;
+
+    public List<ToxinData> GetToxinsInLog() => logToxins;
+    public List<LogData> GetAlarms() => logDataList;
+
+    public LogData GetAlarm(int alarmId) => logDataList.Find(log => log.idx == alarmId);
+
+    public List<(int areaId, int count)> GetAlarmMonthly() => alarmMonthly;
+
+    public List<(int areaId, AlarmCount counts)> GetAlarmYearly() => alarmYearly;
+
+    public List<AlarmSummaryModel> GetAlarmSummary() => alarmSummarys;
+
+    public AlarmCount GetObsStatusCountByAreaId(int areaId)
     {
-        throw new NotImplementedException();
+        AlarmCount obsCounts = new(0,0,0,0);
+
+        //지역 내 관측소들을 순회하며 갯수를 세기
+        var obssInArea = GetObssByAreaId(areaId);
+        obssInArea.ForEach(obs => {
+            ToxinStatus obsStatus = GetObsStatus(obs.id);
+            switch (obsStatus)
+            {
+                case ToxinStatus.Green:     obsCounts.green++;  break;
+                case ToxinStatus.Yellow:    obsCounts.yellow++; break;
+                case ToxinStatus.Red:       obsCounts.red++;    break;
+                case ToxinStatus.Purple:    obsCounts.purple++; break;
+            }
+        });
+
+        return obsCounts;
     }
 
+    public ObsData GetObsByName(string obsName) => obss.Find(obs => obs.obsName == obsName);
 
+    public AreaData GetAreaByName(string areaName) => areas.Find(area => area.areaName == areaName);
 
-    public ToxinData GetToxin(int sensorId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ToxinData> GetToxins()
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<ToxinData> GetToxinsInLog()
-    {
-        throw new NotImplementedException();
-    }
-
-
-
-
-
-    public List<AlarmMontlyModel> GetAlarmMonthly()
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<AlarmYearlyModel> GetAlarmYearly()
-    {
-        throw new NotImplementedException();
-    }
-
-    public List<AlarmSummaryModel> GetAlarmSummary()
-    {
-        throw new NotImplementedException();
-    }
-
-    public Dictionary<int, ToxinStatus> GetAreaStatus()
-    {
-        throw new NotImplementedException();
-    }
+    #endregion [ModelProvider]
 }
