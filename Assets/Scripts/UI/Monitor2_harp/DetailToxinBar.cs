@@ -24,11 +24,6 @@ internal class DetailToxinBar : MonoBehaviour
     //private int periodDays = 1;
     public TMP_Dropdown periodDropdown;
 
-    //테스트용
-    private List<float> chartData = new List<float>();
-    private List<DateTime> timeStamps = new List<DateTime>(); // 시간 데이터 
-    private int maxDataPoints = 20; // 최대 데이터 포인트 수
-
     void Start()
     {
         Initialize();
@@ -38,11 +33,6 @@ internal class DetailToxinBar : MonoBehaviour
         UiManager.Instance.Register(UiEventType.SelectAlarmSensor, OnSelectToxin);
         UiManager.Instance.Register(UiEventType.ChangeTrendLine, OnChangeTrendLine); // 이벤트 등록
 
-
-
-        AddDataPoint(0.5f);  // 첫 번째 더미
-        AddDataPoint(0.6f);  // 두 번째 더미
-        StartCoroutine(AddRandomDataRoutine()); //테스트
     }
 
     private void Initialize()
@@ -52,70 +42,6 @@ internal class DetailToxinBar : MonoBehaviour
         this.btnDetail.SetActive(true);
     }
 
-    #region 테스트용 실시간 갱신 그래프
-    private IEnumerator AddRandomDataRoutine()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(1f); // 1초마다 갱신
-
-            // 랜덤값 추가
-            float randomValue = UnityEngine.Random.Range(0f, 1f);
-            Debug.Log($"Generated random value: {randomValue}");
-
-            // 데이터 추가 및 갱신
-            AddDataPoint(randomValue);
-
-            // 현재 시간 갱신
-            UpdateXAxis();
-        }
-    }
-
-    private void AddDataPoint(float newValue)
-    {
-
-        // 최대 데이터 포인트를 초과하면 가장 오래된 데이터 제거
-        if (chartData.Count >= maxDataPoints)
-        {
-            chartData.RemoveAt(0);
-            timeStamps.RemoveAt(0);
-        }
-
-        // 새로운 데이터 추가
-        chartData.Add(newValue);
-        timeStamps.Add(DateTime.Now);
-
-        // 데이터 포인트가 최소 2개 이상일 때만 업데이트
-        if (chartData.Count >= 2)
-        {
-            line.UpdateControlPoints(chartData);
-            UpdateXAxis();
-        }
-        else
-        {
-            Debug.LogWarning("그래프를 그리기 위한 최소 점 개수가 부족합니다.");
-        }
-    }
-
-    private void UpdateXAxis()
-    {
-        DateTime currentTime = DateTime.Now;
-        for (int i = 0; i < hours.Count; i++)
-        {
-            if (i < timeStamps.Count)
-            {
-                // timeStamps 리스트에 있는 시간 표시
-                hours[i].text = timeStamps[i].ToString("HH:mm:ss");
-            }
-            else
-            {
-                // 최신 시간으로 채워주기
-                DateTime time = currentTime.AddSeconds(-1 * (hours.Count - i - 1));
-                hours[i].text = time.ToString("HH:mm:ss");
-            }
-        }
-    }
-    #endregion
 
     private void InitializeDropdown()
     {
@@ -185,8 +111,7 @@ internal class DetailToxinBar : MonoBehaviour
         if (toxinData == null)
         {
             Debug.LogWarning("ToxinData is null. 랜덤 데이터로 그래프를 초기화합니다.");
-            line.UpdateControlPoints(chartData);
-            SetDynamicHours(periodDays);
+
             return;
         }
 

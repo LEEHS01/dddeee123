@@ -1,4 +1,6 @@
-﻿using Onthesys;
+﻿using DG.Tweening;
+using Onthesys;
+using OpenCover.Framework.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,30 +39,64 @@ public class ModelManager : MonoBehaviour, ModelProvider
         //Load Datas
         dbManager.GetObss(obss => obss.ForEach(obs => this.obss.Add(obs)));
         dbManager.GetAreas(areas => areas.ForEach(area => this.areas.Add(area)));
-        dbManager.GetAlarmLogsActivated(logs => logs.ForEach(log => this.logDataList.Add(log)));
-        dbManager.GetAlarmMonthly(monthModels => monthModels.ForEach(model => this.alarmMonthly.Add( 
+        dbManager.GetAlarmLogsActivated(logs =>
+        {
+            logs.ForEach(log => this.logDataList.Add(log));
+
+            UiManager.Instance.Invoke(UiEventType.ChangeAlarmList, this.logDataList);
+        });
+        dbManager.GetAlarmMonthly(monthModels => monthModels.ForEach(model => this.alarmMonthly.Add(
             (GetAreaByName(model.areanm).areaId, model.cnt)
             )));
         dbManager.GetAlarmYearly(yearModels => yearModels.ForEach(model => this.alarmYearly.Add(
-            (GetAreaByName(model.areanm).areaId, new(0, model.ala1, model.ala2, model.ala0) { })
+            (GetAreaByName(model.areanm).areaId, new(0, model.ala1, model.ala2, model.ala0))
             )));
 
         //Register Events
         uiManager.Register(UiEventType.SelectAlarm, OnSelectAlarm);
-        uiManager.Register(UiEventType.NavigateArea, OnSelectArea);
+        uiManager.Register(UiEventType.NavigateArea, OnNavigateArea);
         uiManager.Register(UiEventType.NavigateObs, OnNavigateObs);
+
+        AwaitInitiating();
+    }
+
+    int initTryCount = 0;
+    private void AwaitInitiating()
+    {
+        initTryCount++;
+        if (initTryCount > 50)
+        {
+            Debug.LogError("ModelManager - AwaitInitiating : 5초가 지난 뒤에도 값이 초기화되지 않았습니다. 이는 초기화 작업 중 치명적인 문제가 있을 가능성을 나타냅니다.");
+
+            UiManager.Instance.Invoke(UiEventType.Initiate);
+            return;
+        }
+
+        bool isInitiated = obss.Count != 0 && areas.Count != 0;
+
+        if (!isInitiated)
+            DOVirtual.DelayedCall(0.1f, AwaitInitiating);
+        else
+            UiManager.Instance.Invoke(UiEventType.Initiate);
     }
 
     #endregion [Instantiating]
 
-    #region [EventListener]
+        #region [EventListener]
 
-    private void OnSelectArea(object obj)
+    private void OnNavigateArea(object obj)
     {
         if (obj is not int areaId) return;
 
         alarmSummarys.Clear();
-        dbManager.GetAlarmSummary(areaId, summarys => summarys.ForEach(summary => alarmSummarys.Add(summary)));
+
+        dbManager.GetAlarmSummary(areaId, summarys =>
+        {
+            summarys.ForEach(summary => alarmSummarys.Add(summary));
+
+            UiManager.Instance.Invoke(UiEventType.ChangeSummary);
+        });
+
     }
 
     private void OnNavigateObs(object obj)
@@ -68,7 +104,10 @@ public class ModelManager : MonoBehaviour, ModelProvider
         if (obj is not int obsId) return;
 
         toxins.Clear();
-        dbManager.GetToxinData(obsId, toxins => toxins.ForEach(toxin => this.toxins.Add(toxin)));
+        dbManager.GetToxinData(obsId, toxins => {
+            toxins.ForEach(toxin => this.toxins.Add(toxin));
+            UiManager.Instance.Invoke(UiEventType.ChangeSensorList);
+        });
     }
 
     private void OnSelectAlarm(object obj)
@@ -95,13 +134,11 @@ public class ModelManager : MonoBehaviour, ModelProvider
     List<LogData> logDataList = new();
     List<AreaData> areas = new();
 
-    Dictionary<int, AlarmCount> areaAlarmCounts = new();
     List<AlarmSummaryModel> alarmSummarys = new();
     List<(int areaId, int count)> alarmMonthly = new();
     List<(int areaId, AlarmCount counts)> alarmYearly = new();
 
     #endregion [DataStructs]
-
 
     #region [ModelProvider]
     public ObsData GetObs(int obsId) => obss.Find(obs => obs.id == obsId);
@@ -148,20 +185,20 @@ public class ModelManager : MonoBehaviour, ModelProvider
     public List<AreaData> GetAreas() => areas;
 
     public AreaData GetArea(int areaId) => areas.Find(area => area.areaId == areaId);
-    public ToxinStatus GetAreaStatus(int areaId) 
+    public ToxinStatus GetAreaStatus(int areaId)
     {
         ToxinStatus highestStatus = ToxinStatus.Green;
 
         //지역 내 관측소들을 순회하며 가장 높은 수준의 알람을 탐색
         var obssInArea = GetObssByAreaId(areaId);
-        obssInArea.ForEach(obs => 
+        obssInArea.ForEach(obs =>
             highestStatus = (ToxinStatus)Math.Max((int)highestStatus, (int)GetObsStatus(obs.id))
         );
 
         return highestStatus;
     }
 
-    public ToxinData GetToxin(int sensorId) => toxins.Find(toxin => toxin.hnsid == sensorId);
+    public ToxinData GetToxin(int sensorId) => sensorId != 1 ? toxins.Find(toxin => toxin.hnsid == sensorId) : toxins[1];
 
     public List<ToxinData> GetToxins() => toxins;
 
@@ -178,7 +215,7 @@ public class ModelManager : MonoBehaviour, ModelProvider
 
     public AlarmCount GetObsStatusCountByAreaId(int areaId)
     {
-        AlarmCount obsCounts = new(0,0,0,0);
+        AlarmCount obsCounts = new(0, 0, 0, 0);
 
         //지역 내 관측소들을 순회하며 갯수를 세기
         var obssInArea = GetObssByAreaId(areaId);
@@ -186,10 +223,10 @@ public class ModelManager : MonoBehaviour, ModelProvider
             ToxinStatus obsStatus = GetObsStatus(obs.id);
             switch (obsStatus)
             {
-                case ToxinStatus.Green:     obsCounts.green++;  break;
-                case ToxinStatus.Yellow:    obsCounts.yellow++; break;
-                case ToxinStatus.Red:       obsCounts.red++;    break;
-                case ToxinStatus.Purple:    obsCounts.purple++; break;
+                case ToxinStatus.Green: obsCounts.green++; break;
+                case ToxinStatus.Yellow: obsCounts.yellow++; break;
+                case ToxinStatus.Red: obsCounts.red++; break;
+                case ToxinStatus.Purple: obsCounts.purple++; break;
             }
         });
 
@@ -200,5 +237,22 @@ public class ModelManager : MonoBehaviour, ModelProvider
 
     public AreaData GetAreaByName(string areaName) => areas.Find(area => area.areaName == areaName);
 
+    public ToxinStatus GetSensorStatus(int obsId, int boardId, int sensorId)
+    {
+        ToxinStatus highestStatus = ToxinStatus.Green;
+
+        //지역 내 관측소들을 순회하며 해당 센서의 가장 높은 수준의 알람을 탐색
+        ObsData obs = GetObs(obsId);
+        List<LogData> sensorLogs = GetAlarms().FindAll(log => log.hnsId == sensorId && log.obsId == obsId && log.boardId == boardId);
+
+        sensorLogs.ForEach(log => {
+
+            ToxinStatus logStatus = log.status != 0 ? (ToxinStatus)log.status : ToxinStatus.Purple;
+
+            highestStatus = (ToxinStatus)Math.Max((int)highestStatus, (int)logStatus);
+            }
+        );
+        return highestStatus;
+    }
     #endregion [ModelProvider]
 }
