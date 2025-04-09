@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 
-public class MapAreaMarker : MonoBehaviour
+public class MapAreaMarker : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     public ToxinStatus status;
     public string obsName;
@@ -56,7 +57,6 @@ public class MapAreaMarker : MonoBehaviour
         btnNavigateObs = GetComponentInChildren<Button>();
         btnNavigateObs.onClick.AddListener(OnClick);
         animator = GetComponentInChildren<Animator>();
-
     }
     
     
@@ -67,10 +67,19 @@ public class MapAreaMarker : MonoBehaviour
         this.obsName = obsName;
         OnValidate();
     }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        animator?.SetTrigger("Start"); // Play 트리거를 설정
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        animator?.SetTrigger("Stop"); // Stop 트리거를 설정
+    }
     private void OnClick()
     {
         Debug.Log($"MapAreaMarker({obsName}) : Clicked!");
         UiManager.Instance.Invoke(UiEventType.NavigateObs, obsId);
     }
-
 }

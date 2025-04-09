@@ -14,23 +14,26 @@ public interface ModelProvider
     public List<ObsData> GetObss();
     public List<ObsData> GetObssByAreaId(int areaId);
     public ToxinStatus GetObsStatus(int obsId);
+    public ObsData GetObsByName(string obsName);
 
     public List<AreaData> GetAreas();
     public AreaData GetArea(int areaId);
     public ToxinStatus GetAreaStatus(int areaId);
+    public AreaData GetAreaByName(string areaName);
 
     public ToxinData GetToxin(int sensorId);
     public List<ToxinData> GetToxins();
     public List<ToxinData> GetToxinsInLog();
 
-    public List<AlarmCount> GetAlarms();
-    public AlarmCount GetAlarm(int alarmId);
+    public List<LogData> GetAlarms();
+    public LogData GetAlarm(int alarmId);
 
-    public List<AlarmMontlyModel> GetAlarmMonthly();
-    public List<AlarmYearlyModel> GetAlarmYearly();
+    public List<(int areaId, int count)> GetAlarmMonthly();
+    public List<(int areaId, AlarmCount counts)> GetAlarmYearly();
     public List<AlarmSummaryModel> GetAlarmSummary();
 
-    public Dictionary<int, ToxinStatus> GetAreaStatus();
+    public AlarmCount GetObsStatusCountByAreaId(int areaId);
 
+    public ToxinStatus GetSensorStatus(int obsId, int boardId, int sensorId);
 
 }

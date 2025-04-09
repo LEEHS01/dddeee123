@@ -26,7 +26,6 @@ public class MapNationMarker : MonoBehaviour, IPointerEnterHandler, IPointerExit
     Button btnNavigateArea;
 
     static Dictionary<ToxinStatus, Color> statusColorDic = new();
-    //static Dictionary<AreaData.AreaType, Sprite> areaSpriteDic = new();
     static MapNationMarker() 
     {
         Dictionary<ToxinStatus, string> rawColorSets = new() {
@@ -40,13 +39,6 @@ public class MapNationMarker : MonoBehaviour, IPointerEnterHandler, IPointerExit
         foreach (var pair in rawColorSets)
             if (ColorUtility.TryParseHtmlString( htmlString : pair.Value, out color)) 
                 statusColorDic[pair.Key] = color;
-
-        //Dictionary<AreaData.AreaType, string> rawSpriteSets = new() {
-        //    { AreaData.AreaType.Nuclear, "Image/Icon_Power.png"},
-        //    { AreaData.AreaType.Ocean,   "Image/Icon_Ocean.png"},
-        //};
-        //foreach (var pair in rawSpriteSets)
-        //    areaSpriteDic[pair.Key] = Resources.Load<Sprite>(pair.Value);
     }
 
     private void OnValidate()
@@ -63,7 +55,7 @@ public class MapNationMarker : MonoBehaviour, IPointerEnterHandler, IPointerExit
             imageCircle.color.a);
         imageMain.color = statusColorDic[status];
         imageIcon.sprite = areaType == AreaData.AreaType.Ocean? oceanSprite:nuclearSprite;// areaSpriteDic[areaType];
-        textAreaName.text = areaName;
+        textAreaName.text = areaName.Substring(0,2);
     }
     private void Start()
     {

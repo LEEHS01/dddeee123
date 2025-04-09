@@ -1,4 +1,5 @@
 ﻿using DG.Tweening;
+using Onthesys;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,8 @@ using UnityEngine.UI;
 
 public class MapArea : MonoBehaviour 
 {
-    
+    ModelProvider modelProvider => UiManager.Instance.modelProvider;
+
     /// <summary>
     /// 선택한 지역 ID, NavigateArea이벤트에 따라 변화함.
     /// </summary>
@@ -23,13 +25,12 @@ public class MapArea : MonoBehaviour
     List<MapAreaMarker> areaMarkers;
     Image imgArea;
 
-
-
     private void Start()
     {
         UiManager.Instance.Register(UiEventType.NavigateHome, OnNavigateHome);
         UiManager.Instance.Register(UiEventType.NavigateArea, OnNavigateArea);
         UiManager.Instance.Register(UiEventType.NavigateObs, OnNavigateObs);
+
 
         areaMarkers = transform.Find("MarkerList").GetComponentsInChildren<MapAreaMarker>(true).ToList();
         imgArea = transform.Find("MapMask").Find("MapImage").GetComponent<Image>();
@@ -56,12 +57,12 @@ public class MapArea : MonoBehaviour
         };
 
 
-        //DEBUG
-        for (int i = 0; i < areaMarkers.Count; i++)
-        {
-            MapAreaMarker areaMarker = areaMarkers[i];
-            areaMarker.SetObsData(i + 1, areaMarker.obsName, areaMarker.status);
-        }
+        ////DEBUG
+        //for (int i = 0; i < areaMarkers.Count; i++)
+        //{
+        //    MapAreaMarker areaMarker = areaMarkers[i];
+        //    areaMarker.SetObsData(i + 1, areaMarker.obsName, areaMarker.status);
+        //}
 
 
         gameObject.SetActive(false);
@@ -93,22 +94,28 @@ public class MapArea : MonoBehaviour
         {
             //지역 배경 설정
             imgArea.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(areaTextureRoots[areaIdx]);
+            var obssInArea = modelProvider.GetObssByAreaId(areaId);
+
+            //예외
+            if (obssInArea.Count != areaMarkers.Count)
+                throw new Exception("MapArea - SetByAreaId : 예상 범위 밖의 값이 입력되었습니다. 표시하기 위한 관측소 수가 지역 내 관측소 수와 일치하지 않습니다.");
 
             //지역 마커 설정
             for (int i = 0; i < areaMarkers.Count; i++)
             {
                 var areaMarker = areaMarkers[i];
+                var obs = obssInArea[i];
+                var obsStatus = modelProvider.GetObsStatus(obs.id);
+
+                areaMarker.SetObsData(obs.id, obs.obsName, obsStatus);
                 areaMarker.transform.position = this.transform.position + obssPos[areaIdx][i];
             }
-
-            //서브 타이틀 설정
-            //TODO
 
             return true;
         }
         catch (Exception ex)
         {
-            Debug.LogError($"MapArea - SetByAreaId() Failed! areaId : {areaId}");
+            Debug.LogError($"MapArea - SetByAreaId() Failed! areaIdx : {areaId}");
             Debug.LogException(ex);
             return false;
         }

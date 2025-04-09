@@ -715,7 +715,7 @@ namespace Onthesys
             }
             catch (Exception ex)
             {
-                string msg = $"GetAreaNameBysd에서 해당 이름을 구하지 못했습니다. areaId : {areaId}";
+                string msg = $"GetAreaNameBysd에서 해당 이름을 구하지 못했습니다. areaIdx : {areaId}";
                 Debug.LogError(msg);
                 Debug.LogException(ex);
                 return msg;

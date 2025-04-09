@@ -24,6 +24,11 @@ internal class DetailToxinBar : MonoBehaviour
     //private int periodDays = 1;
     public TMP_Dropdown periodDropdown;
 
+    //테스트용
+    private List<float> chartData = new List<float>();
+    private List<DateTime> timeStamps = new List<DateTime>(); // 시간 데이터 
+    private int maxDataPoints = 20; // 최대 데이터 포인트 수
+
     void Start()
     {
         Initialize();
@@ -32,6 +37,8 @@ internal class DetailToxinBar : MonoBehaviour
         UiManager.Instance.Register(UiEventType.SelectCurrentSensor, OnSelectLog);
         UiManager.Instance.Register(UiEventType.SelectAlarmSensor, OnSelectToxin);
         UiManager.Instance.Register(UiEventType.ChangeTrendLine, OnChangeTrendLine); // 이벤트 등록
+
+
 
     }
 
@@ -111,7 +118,6 @@ internal class DetailToxinBar : MonoBehaviour
         if (toxinData == null)
         {
             Debug.LogWarning("ToxinData is null. 랜덤 데이터로 그래프를 초기화합니다.");
-
             return;
         }
 

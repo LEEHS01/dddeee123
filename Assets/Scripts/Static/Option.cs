@@ -10,6 +10,21 @@ namespace Onthesys
 
     public class Option : MonoBehaviour
     {
+        static Option() => LoadStoredDbAddress();
+        static void LoadStoredDbAddress()
+        {
+            string returnUrl = PlayerPrefs.GetString("dbAddress");
+            if (returnUrl == null || returnUrl == "")
+            {
+                Debug.LogWarning("there is no db address in local storage");
+                Option.url = "http://192.168.10.125:2000/";
+            }
+            else
+            {
+                Option.url = returnUrl;
+            }
+        }
+
         /// <summary>
         /// 트렌드 UI가 실시간으로 데이터를 받아오는 주기입니다. 단위는 분(MIN)입니다.
         /// 짧아질수록 트렌드가 촘촘해집니다.

@@ -57,4 +57,9 @@ public class GetNumData : MonoBehaviour
 
 
     }
+
+    public void ForcedUpdateView(int selectedValue)
+    {
+        label.text = "" + Mathf.Floor(selectedValue / Mathf.Pow(10, displayType - 1)) % 10;
+    }
 }

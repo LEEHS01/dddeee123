@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 
 public class AreaListTypeItem : MonoBehaviour
@@ -15,6 +16,7 @@ public class AreaListTypeItem : MonoBehaviour
 
     TMP_Text lblAreaName;
     Dictionary<ToxinStatus, TMP_Text> lblAlarmCounts;
+    Button btnNavigateArea;
 
     private void OnValidate()
     {
@@ -35,8 +37,8 @@ public class AreaListTypeItem : MonoBehaviour
             {ToxinStatus.Purple , signalLamps.Find("SignalLamp_Purple").GetComponentInChildren<TMP_Text>() },
         };
 
-        //Test코드
-        lblAreaName.text = areaName;
+        btnNavigateArea = GetComponent<Button>();
+        btnNavigateArea.onClick.AddListener(OnClick);
 
         //lblAreaName.text = "테스트 입력";
         //lblAlarmCounts[ToxinStatus.Green].text = "11";
@@ -45,17 +47,22 @@ public class AreaListTypeItem : MonoBehaviour
         //lblAlarmCounts[ToxinStatus.Purple].text = "14";        
     }
 
+    private void OnClick()
+    {
+        UiManager.Instance.Invoke(UiEventType.NavigateArea, areaId);
+    }
 
+    public void SetAreaData(int areaId, string areaName, AlarmCount alarmCount) => SetAreaData(areaId, areaName, alarmCount.green, alarmCount.yellow, alarmCount.red, alarmCount.purple);
     public void SetAreaData(int areaId, string areaName, Dictionary<ToxinStatus, int> obsStatus) 
     {
+        this.areaId = areaId;
         lblAreaName.text = areaName;
+
         foreach (var pair in obsStatus)
-        {
             lblAlarmCounts[pair.Key].text = pair.Value.ToString();
-        }
     }
     public void SetAreaData(int areaId, string areaName, int greenObs, int yellowObs, int redObs, int purpleObs)
-        => SetAreaData(areaId, areaName, new() {
+        => SetAreaData(areaId, areaName, new Dictionary<ToxinStatus, int>() {
             { ToxinStatus.Green, greenObs },
             { ToxinStatus.Yellow, yellowObs },
             { ToxinStatus.Red, redObs },

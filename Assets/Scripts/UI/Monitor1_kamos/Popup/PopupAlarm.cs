@@ -1,4 +1,6 @@
 ﻿using DG.Tweening;
+using JetBrains.Annotations;
+using NUnit.Framework;
 using Onthesys;
 using System;
 using System.Collections.Generic;
@@ -15,7 +17,9 @@ public class PopupAlarm : MonoBehaviour
     Image imgSignalLamp, imgSignalLight;
     TMP_Text lblTitle, lblSummary;//, lblAwareTransition;
 
-    AlarmLogModel alarmLog = null;
+    Tween intervalThread;
+
+    LogData alarmLog = null;
     int passMins = 0;
     const float intervalValue = 10f;    //60f = 1min
     static Dictionary<ToxinStatus, Color> statusColorDic = new();
@@ -51,13 +55,34 @@ public class PopupAlarm : MonoBehaviour
 
         lblSummary = transform.Find("lblSummary").GetComponent<TMP_Text>();
         //lblAwareTransition = transform.Find("lblAwareTransition").GetComponent<TMP_Text>();
+
+        UiManager.Instance.Register(UiEventType.ChangeAlarmList, OnChangeAlarmList);
+
+        gameObject.SetActive(false);
     }
 
-    public void InitAlarmLog(AlarmLogModel data)
+    void OnChangeAlarmList(object obj)
     {
+        if (obj is not List<LogData> alarmLogs) throw new Exception("PopupAlarm.cs can't accept event type : ChangeAlarmList with no List<AlarmCount>");
+
+        InitAlarmLog(alarmLogs[0]);
+    }
+
+    public void InitAlarmLog(LogData data)
+    {
+        if (this.alarmLog == data) return;
+
+        passMins = 0;
         alarmLog = data;
-        DOVirtual.DelayedCall(0.1f, IntervalUpdateView);
+        IntervalUpdateView();
+
+        intervalThread?.Kill();
+        intervalThread = DOVirtual.DelayedCall(intervalValue,IntervalUpdateView).SetUpdate(true);
+        intervalThread.SetLoops(99999, LoopType.Restart);
+
         //gameObject.SetActive(false);
+
+        gameObject.SetActive(true);
     }
 
     void IntervalUpdateView()
@@ -66,7 +91,7 @@ public class PopupAlarm : MonoBehaviour
 
         //lblSummary 설정
         {
-            DateTime logDt = Convert.ToDateTime(alarmLog.aladt);
+            DateTime logDt = alarmLog.time;
             string passTimeString = "#ERROR!";
             if (passMins < 60)
             {
@@ -82,59 +107,49 @@ public class PopupAlarm : MonoBehaviour
             }
 
             lblSummary.text = "" +
-                $"발생 지점 : {alarmLog.areanm} - {alarmLog.obsnm}\n" +
+                $"발생 지점 : {alarmLog.areaName} - {alarmLog.obsName}\n" +
                 $"발생 시각 : {logDt:yy/MM/dd HH:mm}({passTimeString} 전)\n\n";
 
-            if (alarmLog.alacode == 0)
+            if ((ToxinStatus)alarmLog.status == ToxinStatus.Purple)
             {
                 lblSummary.text +=
-                    $"설비 이상 : {"보드 " + alarmLog.boardidx}";
+                    $"설비 이상 : {"보드 " + alarmLog.boardId}";
             }
             else
             {
                 lblSummary.text +=
-                    $"원인 물질 : {alarmLog.hnsnm}\n" +
-                    $"측정 값 : {alarmLog.currval} / {alarmLog.alahihival}";
+                    $"원인 물질 : {alarmLog.hnsName}\n" +
+                    $"측정 값 : {alarmLog.value.Value} / {alarmLog.value}";
             }
         }
 
         //alacode에 맞게 lblTitle, imgSignalLamp 변경
-        switch (alarmLog.alacode)
+        switch (alarmLog.status)
         {
             case 0: //설비이상
-                lblTitle.text = $"설비이상 발생 : {alarmLog.areanm} - {alarmLog.obsnm} 보드 {alarmLog.boardidx}번";
+                lblTitle.text = $"설비이상 발생 : {alarmLog.areaName} - {alarmLog.obsName} 보드 {alarmLog.boardId}번";
                 imgSignalLamp.color = statusColorDic[ToxinStatus.Purple];
                 break;
             case 1: //경계
-                lblTitle.text = $"경계 알람 발생 : {alarmLog.areanm} - {alarmLog.obsnm} {alarmLog.hnsnm}";
+                lblTitle.text = $"경계 알람 발생 : {alarmLog.areaName} - {alarmLog.obsName} {alarmLog.hnsName}";
                 imgSignalLamp.color = statusColorDic[ToxinStatus.Yellow];
                 break;
             case 2: //경보
-                lblTitle.text = $"경보 알람 발생 : {alarmLog.areanm} - {alarmLog.obsnm} {alarmLog.hnsnm}";
+                lblTitle.text = $"경보 알람 발생 : {alarmLog.areaName} - {alarmLog.obsName} {alarmLog.hnsName}";
                 imgSignalLamp.color = statusColorDic[ToxinStatus.Red];
                 break;
         }
         imgSignalLight.color = imgSignalLamp.color;
-
-
-
-        DOVirtual.DelayedCall(intervalValue, IntervalUpdateView);
     }
 
 
     private void OnClickAlarmTransition()
     {
         UiManager.Instance.Invoke(UiEventType.SelectAlarm, alarmLog);
-        UiManager.Instance.Invoke(UiEventType.NavigateObs, alarmLog.obsidx);
+        UiManager.Instance.Invoke(UiEventType.NavigateObs, alarmLog.obsId);
     }
     private void OnCloseAlarm()
     {
-        PopupAlarmFactory alarmFactory;
-        if (transform.parent.TryGetComponent(out alarmFactory)) 
-        {
-            alarmFactory.RemovePopupAlarm(this);
-        }
-
-        Destroy(gameObject);
+        gameObject.SetActive(false);
     }
 }

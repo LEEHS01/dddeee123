@@ -11,6 +11,8 @@ using UnityEngine.UI;
 
 public class AreaListType : MonoBehaviour
 {
+    ModelProvider modelProvider => UiManager.Instance.modelProvider;
+
     //Main Parameter
     public AreaData.AreaType areaType;
     public Sprite nuclearSprite;
@@ -19,7 +21,7 @@ public class AreaListType : MonoBehaviour
     //Core Components
     Image imgAreaType;
     TMP_Text lblTitle;
-    List<Transform> items = new();
+    List<AreaListTypeItem> items = new();
 
 
     Vector3 defaultPos;
@@ -27,8 +29,9 @@ public class AreaListType : MonoBehaviour
     private void OnValidate()
     {
         imgAreaType = transform.Find("icon").GetComponent<Image>();
-        lblTitle = transform.Find("Text (TMP)").GetComponent<TMP_Text>();
         imgAreaType.sprite = areaType == AreaData.AreaType.Ocean ? oceanSprite : nuclearSprite;
+
+        lblTitle = transform.Find("Text (TMP)").GetComponent<TMP_Text>();
         lblTitle.text = areaType == AreaData.AreaType.Ocean ? "해양산업시설 방류구 및 주변 해역" : "발전소 방류구 및 주변 해역";
     }
 
@@ -37,15 +40,30 @@ public class AreaListType : MonoBehaviour
         UiManager.Instance.Register(UiEventType.NavigateHome, OnNavigateHome);
         UiManager.Instance.Register(UiEventType.NavigateArea, OnNavigateArea);
         UiManager.Instance.Register(UiEventType.NavigateObs, OnNavigateObs);
+        UiManager.Instance.Register(UiEventType.Initiate, OnInitiate);
 
         imgAreaType = transform.Find("icon").GetComponent<Image>();
         lblTitle = transform.Find("Text (TMP)").GetComponent<TMP_Text>();
 
-        foreach (Transform item in transform.Find("List_Panel"))
-            items.Add(item);
+        items = transform.Find("List_Panel").GetComponentsInChildren<AreaListTypeItem>().ToList();
 
         defaultPos = transform.position;
     }
+
+    private void OnInitiate(object obj)
+    {
+        List<AreaData> areasInType = modelProvider.GetAreas().Where(area => area.areaType == this.areaType).ToList();
+
+        for (int i = 0; i < items.Count; i++) 
+        {
+            AreaListTypeItem item = items[i];
+            AreaData area = areasInType[i];
+            AlarmCount alarmCount = modelProvider.GetObsStatusCountByAreaId(area.areaId);
+
+            item.SetAreaData(area.areaId, area.areaName, alarmCount);
+        }
+    }
+
     private void OnNavigateArea(object obj)
     {
         //this.gameObject.SetActive(false);

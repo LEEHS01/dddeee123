@@ -1,10 +1,13 @@
 ﻿using Onthesys;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TMPro;
+using UMP.Services.Helpers;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.Build.Content;
 using UnityEngine;
@@ -13,40 +16,33 @@ using static UnityEditorInternal.ReorderableList;
 
 public class PopupSetting : MonoBehaviour
 {
+    ModelProvider modelProvider => UiManager.Instance.modelProvider;
+
+    #region[UI Componenets]
     Button btnClose;
 
-    GameObject pnlTabObs, pnlTabAlarm, pnlTabCCTV;
-    Button btnTabObs, btnTabAlarm, btnTabCCTV;
+    GameObject pnlTabObs, pnlTabAlarm;//, pnlTabCCTV;
+    Button btnTabObs, btnTabAlarm;//, btnTabCCTV;
     TMP_Dropdown ddlArea, ddlObs;
 
     //TabObs
     Toggle tglBoardToxin, tglBoardChemical;
-
-    TMP_Text lblPositionValue;
-    List<PopupSettingItem> visibilityItems;
+    TMP_InputField txtCCTVEquipment, txtCCTVOutdoor;
+    List<PopupSettingItem> chlUsingSensors;
 
     //TabAlarm
-    Dictionary<ToxinStatus,Toggle> tglAlarmPopup;
+    Slider sldAlarmPopup;
+    TMP_InputField txtDbAddress;
+    #endregion [UI Components]
 
-    //TabCCTV
-    Dictionary<CCTVUrlType, TMP_InputField> txtCCTV;
-
+    #region [Variables]
     //선택한 지역 값
     int areaId, obsId;
 
     //팝업 시 사용할 기본 위치
     Vector3 defaultPos;
+    #endregion [Variables]
 
-    public enum CCTVUrlType
-    {
-        Equipment,
-        Outdoor,
-        ControlUp,
-        ControlDown,
-        ControlLeft,
-        ControlRight,
-
-    }
 
     private void Start()
     {
@@ -58,24 +54,19 @@ public class PopupSetting : MonoBehaviour
                 btnTabObs.onClick.AddListener(() => OnOpenTab(pnlTabObs));
                 btnTabAlarm = conTabButtons.Find("btnAlarm").GetComponent<Button>();
                 btnTabAlarm.onClick.AddListener(() => OnOpenTab(pnlTabAlarm));
-                btnTabCCTV = conTabButtons.Find("btnCCTV").GetComponent<Button>();
-                btnTabCCTV.onClick.AddListener(() => OnOpenTab(pnlTabCCTV));
+                //btnTabCCTV = conTabButtons.Find("btnCCTV").GetComponent<Button>();
+                //btnTabCCTV.onClick.AddListener(() => OnOpenTab(pnlTabCCTV));
             }
 
             Transform conTabPanels = transform.Find("conTabPanels");
             {
                 pnlTabObs = conTabPanels.Find("tabObs").gameObject;
                 pnlTabAlarm = conTabPanels.Find("tabAlarm").gameObject;
-                pnlTabCCTV = conTabPanels.Find("tabCCTV").gameObject;
+                //pnlTabCCTV = conTabPanels.Find("tabCCTV").gameObject;
             }
 
-            Transform conSelectObs = transform.Find("conSelectObs");
-            {
-                ddlArea = conSelectObs.Find("ddlArea").GetComponent<TMP_Dropdown>();
-                ddlArea.onValueChanged.AddListener(OnSelectArea);
-                ddlObs = conSelectObs.Find("ddlObs").GetComponent<TMP_Dropdown>();
-                ddlObs.onValueChanged.AddListener(OnSelectObs);
-            }
+            btnClose = transform.Find("Btn_Close").GetComponent<Button>();
+            btnClose.onClick.AddListener(OnCloseSetting);
         }
         
         //tabObs 구성요소
@@ -88,55 +79,82 @@ public class PopupSetting : MonoBehaviour
                 tglBoardChemical.onValueChanged.AddListener(isFixing => OnToggleBoard(false, isFixing));
             }
 
-            Transform obsInspection = pnlTabObs.transform.Find("ObsInspection");
-            lblPositionValue = obsInspection.Find("lblPositionValue").GetComponent<TMP_Text>();
-            //txtCCTVEquipment = obsInspection.Find("txtCCTVEquipment").GetComponent<TMP_InputField>();
-            //txtCCTVOutdoor = obsInspection.Find("txtCCTVOutdoor").GetComponent<TMP_InputField>();
+            Transform conSelectObs = pnlTabObs.transform.Find("conSelectObs");
+            {
+                ddlArea = conSelectObs.Find("ddlArea").GetComponent<TMP_Dropdown>();
+                ddlArea.onValueChanged.AddListener(OnSelectArea);
+                ddlObs = conSelectObs.Find("ddlObs").GetComponent<TMP_Dropdown>();
+                ddlObs.onValueChanged.AddListener(OnSelectObs);
+            }
 
-            visibilityItems = transform.GetComponentsInChildren<PopupSettingItem>().ToList();
+            Transform conCCTVUrls = pnlTabObs.transform.Find("conCCTVUrls");
 
-            for (int i = 0; i < visibilityItems.Count; i++)
-                visibilityItems[i].SetItem(i, "독성도", true);
+            txtCCTVEquipment = conCCTVUrls.Find("lblStreamEquipment").GetComponentInChildren<TMP_InputField>();
+            txtCCTVEquipment.onValueChanged.AddListener(url => OnChangeCCTV(false, url));
+            txtCCTVOutdoor = conCCTVUrls.Find("lblStreamEquipment").GetComponentInChildren<TMP_InputField>();
+            txtCCTVOutdoor.onValueChanged.AddListener(url => OnChangeCCTV(true, url));
+
+            chlUsingSensors = transform.GetComponentsInChildren<PopupSettingItem>().ToList();
+
+            for (int i = 0; i < chlUsingSensors.Count; i++)
+                chlUsingSensors[i].SetItem(i, "불러오는 중...", true);
         }
 
         //tabAlarm 구성요소
         {
-            Transform toggleAlarmPopup = pnlTabAlarm.transform.Find("ToggleAlarmPopup");
-            tglAlarmPopup = new() {
-                {ToxinStatus.Yellow,    toggleAlarmPopup.Find("Serious")        .GetComponentInChildren<Toggle>() },
-                {ToxinStatus.Red,       toggleAlarmPopup.Find("Warning")        .GetComponentInChildren<Toggle>() },
-                {ToxinStatus.Purple,    toggleAlarmPopup.Find("Malfunction")    .GetComponentInChildren<Toggle>() },
-            };
+            //Transform toggleAlarmPopup = pnlTabAlarm.transform.Find("ToggleAlarmPopup");
+            //tglAlarmPopup = new() {
+            //    {ToxinStatus.Yellow,    toggleAlarmPopup.Find("Serious")        .GetComponentInChildren<Toggle>() },
+            //    {ToxinStatus.Red,       toggleAlarmPopup.Find("Warning")        .GetComponentInChildren<Toggle>() },
+            //    {ToxinStatus.Purple,    toggleAlarmPopup.Find("Malfunction")    .GetComponentInChildren<Toggle>() },
+            //};
+            Transform slideAlarmPopup = pnlTabAlarm.transform.Find("SlideAlarmPopup");
+            sldAlarmPopup = slideAlarmPopup.GetComponentInChildren<Slider>();
+            sldAlarmPopup.onValueChanged.AddListener(OnAlarmSliderChanged);
 
+            Transform dbAddressContainer = pnlTabAlarm.transform.Find("DbAddress");
+            txtDbAddress = dbAddressContainer.GetComponentInChildren<TMP_InputField>();
+            txtDbAddress.text = Option.url;
+            txtDbAddress.onValueChanged.AddListener(OnChangeDbAddress);
         }
 
-        //tabCCTV 구성요소
-        {
-            Transform conCCTVUrls = pnlTabCCTV.transform.Find("conCCTVUrls");
-            txtCCTV = new() {
-                {CCTVUrlType.Equipment,     conCCTVUrls.Find("lblStreamEquipment")   .GetComponentInChildren<TMP_InputField>()},
-                {CCTVUrlType.Outdoor,       conCCTVUrls.Find("lblStreamEquipment")   .GetComponentInChildren<TMP_InputField>()},
-                {CCTVUrlType.ControlUp,     conCCTVUrls.Find("lblControlUp")        .GetComponentInChildren<TMP_InputField>()},
-                {CCTVUrlType.ControlDown,   conCCTVUrls.Find("lblControlDown")      .GetComponentInChildren<TMP_InputField>()},
-                {CCTVUrlType.ControlLeft,   conCCTVUrls.Find("lblControlLeft")      .GetComponentInChildren<TMP_InputField>()},
-                {CCTVUrlType.ControlRight,  conCCTVUrls.Find("lblControlRight")     .GetComponentInChildren<TMP_InputField>()},
-            };
-        }
 
         UiManager.Instance.Register(UiEventType.PopupSetting, OnPopupSetting);
-
-        btnClose = transform.Find("Btn_Close").GetComponent<Button>();
-        btnClose.onClick.AddListener(OnCloseSetting);
+        UiManager.Instance.Register(UiEventType.NavigateObs, OnNavigateObs);
+        UiManager.Instance.Register(UiEventType.ChangeSensorList, OnChangeSensorList);
 
         defaultPos = transform.position;
 
+        //초기화 진행
         OnOpenTab(this.pnlTabObs);
         gameObject.SetActive(false);
+        LoadAreaList();
+        LoadObs(1);
 
         //Debug!
         UiManager.Instance.Register(UiEventType.CommitSensorUsing, tuple => Debug.LogWarning("CommitSensorUsing occured : " + tuple));
     }
+
+    private void OnChangeSensorList(object obj)
+    {
+        List<ToxinData> toxins = modelProvider.GetToxins();
+
+        for (int i = 0; i < toxins.Count; i++)
+        {
+            ToxinData toxin = toxins[i];
+            PopupSettingItem item = chlUsingSensors[i];
+            item.SetItem(i, toxin.hnsName, toxin.on);
+        }
+
+        ToxinData toxinBoard = toxins[0];
+        tglBoardToxin.isOn = !toxinBoard.fix;
+
+        ToxinData chemiBoard = toxins[1];
+        tglBoardChemical.isOn = !chemiBoard.fix;
+
+    }
     
+
     #region [Basic Function]
     private void OnOpenTab(GameObject targetTab)
     {
@@ -145,11 +163,11 @@ public class PopupSetting : MonoBehaviour
 
         btnTabObs   .GetComponentInChildren<Image>().sprite = pnlTabObs == targetTab? sprTabOn : sprTabOff;
         btnTabAlarm .GetComponentInChildren<Image>().sprite = pnlTabAlarm == targetTab? sprTabOn : sprTabOff;
-        btnTabCCTV  .GetComponentInChildren<Image>().sprite = pnlTabCCTV == targetTab? sprTabOn : sprTabOff;
+        //btnTabCCTV  .GetComponentInChildren<Image>().sprite = pnlTabCCTV == targetTab? sprTabOn : sprTabOff;
 
         pnlTabObs.SetActive(pnlTabObs == targetTab);
         pnlTabAlarm.SetActive(pnlTabAlarm == targetTab);
-        pnlTabCCTV.SetActive(pnlTabCCTV == targetTab);
+        //pnlTabCCTV.SetActive(pnlTabCCTV == targetTab);
     }
     private void OnPopupSetting(object obj)
     {
@@ -165,8 +183,8 @@ public class PopupSetting : MonoBehaviour
     {
         if (obj is not int obsId) return;
 
-        //DEBUG
         this.obsId = obsId; 
+        
     }
 
     #endregion [Basic Function]
@@ -174,27 +192,15 @@ public class PopupSetting : MonoBehaviour
     #region [DropdownList]
     private void LoadAreaList()
     {
-        //TODO
-
         //지역 정보 수신
-        List<object> areaList = new();
+        List<AreaData> areas = modelProvider.GetAreas();
 
         //ddl에 삽입
         ddlArea.ClearOptions();
-        ddlArea.AddOptions(new List<TMP_Dropdown.OptionData>()
-        {
-            new("인천"),
-            new("평택"),
-            new("평택"),
-            new("평택"),
-            new("평택"),
 
-            new("평택"),
-            new("평택"),
-            new("평택"),
-            new("평택"),
-            new("평택"),
-        });
+        List<TMP_Dropdown.OptionData> dropdownItems = new();
+        areas.ForEach(area => dropdownItems.Add(new(area.areaName)));
+        ddlArea.AddOptions(dropdownItems);
 
         //기본 지역 설정
         OnSelectArea(0);
@@ -207,20 +213,15 @@ public class PopupSetting : MonoBehaviour
     }
     private void LoadObs(int areaId)
     {
-        //TODO
-
         //areaId를 통해 관측소 정보 수신
-        List<object> obsList = new();
+        List<ObsData> obss = modelProvider.GetObssByAreaId(areaId);
 
         //ddl에 삽입
         ddlObs.ClearOptions();
-        ddlObs.AddOptions(new List<TMP_Dropdown.OptionData>()
-        {
-            new("능내리"),
-            new("A동"),
-            new("B동"),
-        });
 
+        List<TMP_Dropdown.OptionData> dropdownItems = new();
+        obss.ForEach(obs => dropdownItems.Add(new(obs.obsName)));
+        ddlObs.AddOptions(dropdownItems);
     }
     private void OnSelectObs(int idx)
     {
@@ -248,22 +249,42 @@ public class PopupSetting : MonoBehaviour
     
     #region [Alarm Tab]
 
-    private void OnTogglePopup(ToxinStatus status, bool isOn)
+
+    private void OnAlarmSliderChanged(float value)
     {
-        //Temporary Function
-        UiManager.Instance.Invoke(UiEventType.CommitPopupToggle, (status, isOn));
+        int selection = 4;
+        int choosenIdx = Mathf.RoundToInt(value * (selection-1));
+
+        float normalizedSliderValue = (float)choosenIdx / (float)(selection - 1);
+        sldAlarmPopup.SetValueWithoutNotify(normalizedSliderValue);
+
+        UiManager.Instance.Invoke(UiEventType.CommitPopupAlarmCondition, (ToxinStatus)choosenIdx);
     }
 
 
+
+
+
+    private void OnChangeDbAddress(string dbAddress) 
+    {
+        PlayerPrefs.SetString("dbAddress", dbAddress);
+        Option.url = dbAddress;
+    }
+
     #endregion [Alarm Tab]
-    
+
     #region [CCTV Tab]
 
-    private void OnChangeCCTV(CCTVUrlType urlType, string url)
+    private void OnChangeCCTV(bool isOutdoor, string url)
     {
         //Temporary Function
-        UiManager.Instance.Invoke(UiEventType.CommitCCTVUrl, (obsId, urlType, url));
+        UiManager.Instance.Invoke(UiEventType.CommitCCTVUrl, (obsId, isOutdoor, url));
     }
 
     #endregion [CCTV Tab]
+
+
+
+
+
 }

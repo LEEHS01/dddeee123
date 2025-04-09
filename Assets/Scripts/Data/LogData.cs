@@ -10,6 +10,7 @@ using System.Net;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
+using UnityEngine.UIElements;
 
 namespace Onthesys
 {
@@ -25,8 +26,9 @@ namespace Onthesys
         public int status;
         public float? value;
         public int idx;
+        public float serious, warning;
 
-        public LogData(int obsid, int boardid, string areaName, string obsName, int hnsId, string hnsName, DateTime dt, int status, float? val, int idx)
+        public LogData(int obsid, int boardid, string areaName, string obsName, int hnsId, string hnsName, DateTime dt, int status, float? val, int idx, float serious, float warning)
         {
             this.obsId = obsid;
             this.boardId = boardid;
@@ -38,6 +40,8 @@ namespace Onthesys
             this.status = status;
             this.value = val;
             this.idx = idx;
+            this.serious = serious;
+            this.warning = warning;
         }
     }
 

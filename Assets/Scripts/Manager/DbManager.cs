@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using NUnit.Framework;
 using Onthesys;
 using System;
 using System.Collections;
@@ -105,6 +106,13 @@ public class DbManager : MonoBehaviour
     public void SetToxinDataProperty(int obsId, ToxinData toxinData, UpdateColumn column, Action callback)
         => StartCoroutine(SetToxinDataPropertyFunc(obsId, toxinData, column, callback));
 
+    /// <summary>
+    /// 지역 정보들을 가져옵니다.
+    /// </summary>
+    /// <param name="areaId">지역ID</param>
+    /// <param name="callback"></param>
+    public void GetAreas(Action<List<AreaData>> callback)
+        => StartCoroutine(GetAreasFunc(callback));
     #endregion
 
     #region [내부 열거자 함수]
@@ -142,8 +150,10 @@ public class DbManager : MonoBehaviour
 
             entity.ForEach(item =>
             alarmLogs.Add(
-                new LogData(item.obsidx, item.boardidx, item.areanm, item.obsnm, item.hnsidx, item.hnsnm, Convert.ToDateTime(item.aladt), item.alacode, item.currval, item.alaidx)
-                ));
+                new LogData(item.obsidx, item.boardidx, item.areanm, item.obsnm, item.hnsidx, item.hnsnm, Convert.ToDateTime(item.aladt), item.alacode, item.currval, item.alaidx, 
+                item.alahival.HasValue? item.alahival.Value : 0f, 
+                item.alahihival.HasValue? item.alahihival.Value : 0f
+                )));
         }));
         #endregion
 
@@ -292,6 +302,19 @@ public class DbManager : MonoBehaviour
             Debug.Log("Update Response: " + response);
             callback();
         }));
+    }
+    IEnumerator GetAreasFunc(Action<List<AreaData>> callback)
+    {
+        List<AreaData> list = new();
+        var query = $"SELECT * FROM TB_AREA;";
+
+        yield return StartCoroutine(ResponseAPIString(QueryType.SELECT.ToString(), query, (response) =>
+        {
+            Debug.Log("API Summary Response: " + response);
+            var entity = JsonConvert.DeserializeObject<List<AreaDataModel>>(response);
+            entity.ForEach(model => list.Add(AreaData.FromAreaDataModel(model)));
+        }));
+        callback(list);
     }
     #endregion
 

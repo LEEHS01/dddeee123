@@ -1,0 +1,47 @@
+﻿using Onthesys;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+using static Unity.Burst.Intrinsics.X86.Avx;
+
+public class AreaListMonthItem : MonoBehaviour
+{
+    ModelProvider modelProvider => UiManager.Instance.modelProvider;
+    int areaId;
+
+    TMP_Text lblAreaName, lblPercentage;
+    Button btnNavigateArea;
+    List<GetNumData> numDatas;
+
+    private void Start()
+    {
+        lblAreaName = transform.Find("Text (TMP)_Content").GetComponent<TMP_Text>();
+        lblPercentage = transform.Find("Text (TMP)_Percent").GetComponent<TMP_Text>();
+        
+        numDatas = GetComponentsInChildren<GetNumData>().ToList();
+
+        btnNavigateArea = GetComponent<Button>();
+        btnNavigateArea.onClick.AddListener(OnClick);
+    }
+
+    public void SetAreaData(int areaId, string areaName, int count, float percent)
+    {
+        this.areaId = areaId;
+        lblAreaName.text = areaName;
+
+        numDatas.ForEach(numData => numData.ForcedUpdateView(count));
+
+        lblPercentage.text = "" + Mathf.FloorToInt(percent * 100f) + " %";
+    }
+
+    void OnClick() 
+    {
+        UiManager.Instance.Invoke(UiEventType.NavigateArea, areaId);
+    }
+
+}

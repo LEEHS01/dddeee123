@@ -8,6 +8,15 @@ namespace Onthesys
 {
     public class AlarmCount
     {
+        public AlarmCount() => new AlarmCount(0, 0, 0, 0);
+        public AlarmCount(int green, int yellow, int red, int purple) 
+        {
+            this.green = green;
+            this.yellow = yellow;
+            this.red = red;
+            this.purple = purple;
+        }
+
         public int green;
         public int red;
         public int yellow;

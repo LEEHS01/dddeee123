@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Onthesys;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,30 @@ public class UiManager : MonoBehaviour
         }
         Instance = this;
         //Debug.LogWarning("UiManagerUiManager.Instance was null!" + Instance.name);
+    }
+
+    private void Update()
+    {
+        //DEBUG
+        if (Input.GetKeyDown(KeyCode.F1))
+        {
+            this.Invoke(UiEventType.ChangeAlarmList, new List<LogData>(){
+                new(0, 0, "인천", "능내리", 5, "클로로포름", DateTime.Now, 0, 105f, -1, 100, 80),
+            });
+        }
+        if (Input.GetKeyDown(KeyCode.F2))
+        {
+            this.Invoke(UiEventType.ChangeAlarmList, new List<LogData>(){
+                new(0, 0, "인천", "능내리", 5, "클로로포름", DateTime.Now, 1, 105f, -1, 100, 80),
+            });
+
+        }
+        if (Input.GetKeyDown(KeyCode.F3))
+        {
+            this.Invoke(UiEventType.ChangeAlarmList, new List<LogData>(){
+                new(0, 0, "인천", "능내리", 5, "클로로포름", DateTime.Now, 2, 105f, -1, 100, 80),
+            });
+        }
     }
 
     private Dictionary<UiEventType, Action<object>> eventHandlers = new();
@@ -54,6 +79,8 @@ public class UiManager : MonoBehaviour
 }
 public enum UiEventType
 {
+    Initiate,       //주요 컨트롤 객체들의 초기화 완료
+
     NavigateHome,   //시작 화면으로 이동
     NavigateArea,   //지역 화면으로 이동
     NavigateObs,    //관측소 화면으로 이동
@@ -66,7 +93,7 @@ public enum UiEventType
 
 
     ChangeTrendLine,    //실시간 트렌드 갱신
-    ChangehBarChart,    //연간 지역 알람 요약본 업데이트 (기존 OnChangeSummary)
+    ChangeSummary,    //연간 지역 알람 요약본 업데이트 (기존 OnChangeSummary)
     ChangeAlarmList,    //알람리스트 변동 발생 (기존 OnAlarmUpdated)
     ChangeSensorList,   //센서리스트 변동 발생 (기존 OnLoadSetting)
     ChangeAlarmSensorList,  //과거 알람 센서리스트에 변동 발생
@@ -78,7 +105,7 @@ public enum UiEventType
     CommitSensorUsing, //환경설정 - 센서 표시 변경
     CommitBoardFixing,      //환경설정 - 보드 수정 변경
     CommitCCTVUrl,          //환경설정 - CCTV URL 변경
-    CommitPopupToggle,      //환경설정 - 팝업 알람 조건 변경
+    CommitPopupAlarmCondition,      //환경설정 - 팝업 알람 조건 변경
 
     //계획 중
 

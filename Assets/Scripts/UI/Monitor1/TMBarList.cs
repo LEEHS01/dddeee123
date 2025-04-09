@@ -38,7 +38,7 @@ public class TMBarList : MonoBehaviour
 
     public void OnUpdateAlarm()
     {
-        //var ala = DataManager.Instance.alarmLogs.Count(t => t.areaName.Equals(mapName));
+        //var ala = DataManager.Instance.alarmLogs.Count(t => t.areaNm.Equals(mapName));
         //if(ala > 0)
         //{
         //    StartCoroutine(DataManager.Instance.LoadAlarmSummary(areaidx));

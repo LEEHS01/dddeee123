@@ -9,6 +9,8 @@ using UnityEngine;
 
 public class ObsNamePanel : MonoBehaviour
 {
+    ModelProvider modelProvider => UiManager.Instance.modelProvider;
+
     public int obsId = -1;
     TMP_Text lblObsName;
 
@@ -19,12 +21,11 @@ public class ObsNamePanel : MonoBehaviour
         lblObsName = GetComponentInChildren<TMP_Text>();
     }
 
-    private void OnNavigateObs(object obs) 
+    private void OnNavigateObs(object obj) 
     {
-        string txt = "능내리";
-        ///TODO
-        obsId = obsId;
-        lblObsName.text = txt;
+        if (obj is not int obsId) return;
+
+        lblObsName.text = modelProvider.GetObs(obsId).obsName;
     }
 
 }

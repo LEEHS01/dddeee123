@@ -10,7 +10,7 @@ using UnityEngine;
 
 public class AlarmList : MonoBehaviour
 {
-
+    ModelProvider modelProvider =>  UiManager.Instance.modelProvider;
     // 기존 코드와 동일하게 유지
     private List<LogData> list; // 알람 데이터 목록
 
@@ -26,21 +26,18 @@ public class AlarmList : MonoBehaviour
 
     void Start()
     {
-
         this.itemPrefab.gameObject.SetActive(false);
-        // 알람 리스트 변경 이벤트 구독
+        UiManager.Instance.Register(UiEventType.Initiate, OnUpdateAlarmList);
         UiManager.Instance.Register(UiEventType.ChangeAlarmList, OnUpdateAlarmList);
     }
 
     // 알람 리스트 업데이트 이벤트 핸들러
     private void OnUpdateAlarmList(object data)
     {
-        if (data is List<LogData> logs)
-        {
-            list = logs;
-            UpdateText();
-            // 향후 알람 리스트 업데이트 로직 추가 가능
-        }
+        List<LogData> logs = modelProvider.GetAlarms();
+
+        list = logs;
+        UpdateText();
     }
 
     private void UpdateText()
@@ -64,12 +61,13 @@ public class AlarmList : MonoBehaviour
             new Vector2(this.itemContainer.GetComponent<RectTransform>().sizeDelta.x, height);
     }
 
-    // 알람 항목 클릭 시 발생하는 이벤트 (UI 버튼에 연결)
+
     public void OnAlarmSelected(int alarmIndex)
     {
         if (list != null && alarmIndex < list.Count)
         {
-            UiManager.Instance.Invoke(UiEventType.SelectAlarm, list[alarmIndex]);
+            var alarm = list[alarmIndex];
+            UiManager.Instance.Invoke(UiEventType.SelectAlarm, alarm);
         }
     }
 

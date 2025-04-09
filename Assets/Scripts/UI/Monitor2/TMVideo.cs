@@ -75,8 +75,8 @@ public class TMVideo : MonoBehaviour
         });
         // this.video1.m_AutoOpen = true;
         // this.video1.m_AutoStart = true;
-        // this.video1.PlatformOptionsWindows.path = DataManager.Instance.areas[data.areaId].src_video2;
-        // this.video2.PlatformOptionsWindows.path = DataManager.Instance.areas[data.areaId].src_video2;
+        // this.video1.PlatformOptionsWindows.path = DataManager.Instance.areas[data.areaIdx].src_video2;
+        // this.video2.PlatformOptionsWindows.path = DataManager.Instance.areas[data.areaIdx].src_video2;
         // this.video1.OpenVideoFromFile(MediaPlayer.FileLocation.AbsolutePathOrURL, this.video1.PlatformOptionsWindows.path, true);
         // this.video2.OpenVideoFromFile(MediaPlayer.FileLocation.AbsolutePathOrURL, this.video2.PlatformOptionsWindows.path, true);
     }

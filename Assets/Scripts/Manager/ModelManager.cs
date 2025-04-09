@@ -39,12 +39,7 @@ public class ModelManager : MonoBehaviour, ModelProvider
         //Load Datas
         dbManager.GetObss(obss => obss.ForEach(obs => this.obss.Add(obs)));
         dbManager.GetAreas(areas => areas.ForEach(area => this.areas.Add(area)));
-        dbManager.GetAlarmLogsActivated(logs =>
-        {
-            logs.ForEach(log => this.logDataList.Add(log));
-
-            UiManager.Instance.Invoke(UiEventType.ChangeAlarmList, this.logDataList);
-        });
+        dbManager.GetAlarmLogsActivated(logs => logs.ForEach(log => this.logDataList.Add(log)));
         dbManager.GetAlarmMonthly(monthModels => monthModels.ForEach(model => this.alarmMonthly.Add(
             (GetAreaByName(model.areanm).areaId, model.cnt)
             )));
@@ -56,9 +51,11 @@ public class ModelManager : MonoBehaviour, ModelProvider
         uiManager.Register(UiEventType.SelectAlarm, OnSelectAlarm);
         uiManager.Register(UiEventType.NavigateArea, OnNavigateArea);
         uiManager.Register(UiEventType.NavigateObs, OnNavigateObs);
+        uiManager.Register(UiEventType.Initiate, OnInitiate);
 
         AwaitInitiating();
     }
+
 
     int initTryCount = 0;
     private void AwaitInitiating()
@@ -72,6 +69,7 @@ public class ModelManager : MonoBehaviour, ModelProvider
             return;
         }
 
+
         bool isInitiated = obss.Count != 0 && areas.Count != 0;
 
         if (!isInitiated)
@@ -82,7 +80,35 @@ public class ModelManager : MonoBehaviour, ModelProvider
 
     #endregion [Instantiating]
 
-        #region [EventListener]
+    #region [Processing]
+
+
+
+
+    void GetTrendValueProcess() 
+    {
+        dbManager.GetToxinValueLast(currentObsId, currents => 
+        {
+            if (currents.Count != toxins.Count) Debug.LogWarning("ModelManager - GetTrendValueProcess : currents와 toxins 간의 길이 불일치.");
+
+            for (int i = 0; i <= toxins.Count; i++) 
+            {
+                ToxinData toxin = toxins[i];
+                CurrentDataModel current = currents[i];
+                toxin.UpdateValue(current);
+            }
+            uiManager.Invoke(UiEventType.ChangeTrendLine);
+        });
+
+        //지속적으로 재귀 호출
+        DOVirtual.DelayedCall(/*Option.TREND_TIME_INTERVAL*/1, GetTrendValueProcess);
+    }
+
+  
+
+    #endregion [Processing]
+
+    #region [EventListener]
 
     private void OnNavigateArea(object obj)
     {
@@ -103,12 +129,53 @@ public class ModelManager : MonoBehaviour, ModelProvider
     {
         if (obj is not int obsId) return;
 
-        toxins.Clear();
-        dbManager.GetToxinData(obsId, toxins => {
-            toxins.ForEach(toxin => this.toxins.Add(toxin));
+        currentObsId = obsId;
+
+        dbManager.GetToxinData(obsId, toxins =>
+        {
+            this.toxins.Clear();
+            this.toxins.AddRange(toxins);
+
             UiManager.Instance.Invoke(UiEventType.ChangeSensorList);
         });
+
+        DateTime endTime = DateTime.Now;
+        DateTime startTime = endTime.AddHours(-3);
+
+        dbManager.GetChartValue(obsId, startTime, endTime, Option.TREND_TIME_INTERVAL, chartDatas =>
+        {
+            toxins.ForEach(model =>
+            {
+                if (chartDatas.Count <= 0) throw new Exception("LoadObsToxin - GetChartValue - UpdateChartData : 얻은 데이터의 원소 수가 0입니다. 차트를 정상적으로 표시할 수 없습니다. GetChartValue의 범위를 확인해주세요.");
+
+                var values = chartDatas
+                    .Where(t => t.boardidx == model.boardid && t.hnsidx == model.hnsid)
+                    .Select(t => t.val).ToList();
+                model.values = values;
+            });
+
+            logDataList.Where(t => t.obsId == obsId).ToList().ForEach(ala =>
+            {
+                if (ala.status == 0)
+                {
+                    toxins
+                    .Where(t => t.boardid == ala.boardId && t.status != ToxinStatus.Red).ToList()
+                    .ForEach(t => t.status = ToxinStatus.Yellow);
+                }
+                else
+                {
+                    toxins
+                    .FirstOrDefault(t => t.boardid == ala.boardId && t.hnsid == ala.hnsId)
+                    .status = ToxinStatus.Red;
+                }
+            });
+
+            currentObsId = obsId;
+
+            UiManager.Instance.Invoke(UiEventType.ChangeTrendLine);
+        });
     }
+
 
     private void OnSelectAlarm(object obj)
     {
@@ -119,14 +186,49 @@ public class ModelManager : MonoBehaviour, ModelProvider
         if (log == null) throw new Exception("ModelManager - OnSelectAlarm : 선택한 로그의 정보를 찾지 못했습니다.");
 
         logToxins.Clear();
-        dbManager.GetToxinData(log.obsId, toxins => toxins.ForEach(toxin => this.logToxins.Add(toxin)));
+        dbManager.GetToxinData(log.obsId, toxins =>
+        {
+            toxins.ForEach(toxin => this.logToxins.Add(toxin));
+
+            // 선택된 관측소 ID를 UI에 전달
+            UiManager.Instance.Invoke(UiEventType.SelectAlarmSensor, log.obsId);
+
+            // 독성/센서 데이터 리스트 전달 → ToxinList3에서 OnLoadSetting 호출됨
+            UiManager.Instance.Invoke(UiEventType.ChangeSensorList, this.logToxins);
+        });
 
         //TODO
+    }
+
+    private void OnUpdateAlarm(object obj)
+    {
+        dbManager.GetAlarmLogsActivated(logs =>
+        {
+            logs.ForEach(log => this.logDataList.Add(log));
+
+            UiManager.Instance.Invoke(UiEventType.ChangeAlarmList);
+
+        });
+    }
+
+    private void OnInitiate(object obj)
+    {
+        GetTrendValueProcess();
+        /*
+        dbManager.GetAlarmLogsActivated(logs =>
+        {
+            logs.ForEach(log => this.logDataList.Add(log));
+
+            UiManager.Instance.Invoke(UiEventType.ChangeAlarmList, this.logDataList);
+        });*/
+
     }
 
     #endregion [EventListener]
 
     #region [DataStructs]
+
+    int currentObsId = -1;
 
     List<ObsData> obss = new();
     List<ToxinData> toxins = new();
